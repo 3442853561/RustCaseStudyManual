@@ -23,7 +23,7 @@ RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup
 https://github.com/3442853561/rust-housework/blob/master/batch/update.bat
 ```
 
-这里还有一个用于 Linux 的版本，由 GitHub 上的 @Linger2 提供。在这里笔者为他做出的无私贡献表示深深地感谢。获取地址是：
+这里还有一个用于 Linux 的版本，由 GitHub 上的 [@Linger2](https://github.com/Linger2) 提供。在这里笔者为他做出的无私贡献表示深深地感谢。获取地址是：
 
 ```
 https://github.com/3442853561/rust-housework/blob/master/batch/update.sh
@@ -159,3 +159,121 @@ fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
 ```
 
 这个函数的细节在标准库里面有明确的定义，我们能改的只有 `write!(f, "联系人: {}\n电话: {}", self.name, self.phone)` 这条表达式，而且这条表达式实际上还是个宏。在 Rust 中，宏长得非常像函数，不过宏会在宏名后面加一个叹号，当然也有比较特殊的 `try!` 宏写成一个问号。这些细节我们以后再讲。不过如果我们瞎改的话，实际上我们就得不到 `Result<(), fmt::Error>` 的返回值了。说到底我们只能改  `"联系人: {}\n电话: {}", self.name, self.phone` 这一小部分。大致和 C 语言的情况类似。不过 Rust 中不区分类型的用 `{}` 表示格式占位。
+
+那么接下来为了方便联系人列表的增删改查我们最好还是为其建立一个数据结构。
+
+```
+use std::collections::HashMap;
+
+struct ContactsData {
+    list: Vec<Contact>,
+    index: HashMap<String, usize>,
+}
+```
+
+注意这里我们使用了 HashMap 这个数据类型以至于我们需要通过 use std::collections::HashMap; 将其引入。它是标准库里面的一种集合类型和我们之前见过的 Vec 一样，不过 Vec 是自动被引入的。在 Rust 语言中构造类型的名称一般采用一种改良的驼峰式写法，即首字母需要大写的驼峰式写法。如果想要写出优美的语义化程序，请您保持这种写法。当您见到一个有着良好规范的 Rust 程序这种被改良的驼峰式写法往往表示这一个独立的事物——一个构造类型、一个枚举类型或者一个枚举类型中的某种枚举情况。因为在 Rust 语言中枚举的含义包含了共用体的含义。所以这种首字母大写的驼峰写法是恰当的。有一些程序员可能更习惯采用首字母小写的驼峰写法，这样在 Rust 语言中引起一种混乱——当一个构造类型只有一个单词的时候，那么我们就很难区分它到底是不是 Rust 中提供的基础类型了。而且会导致编译器发出一个 warning。在您编写 Rust 程序的一般情况下您无需理会 warning，不过当您重构或优化代码时这些信息就起到了重要的作用。这和某些必须要调整 warning 的语言是不同的。在 Rust 中 warning 表示一些不痛的问题，换句话说它并不会出现运行时报错这种难以预料的灾难。不过如果不修复它则可能给生成代码的质量以及后期维护带来本不必要的开销。
+
+这里我们也涉及了哈希表（HashMap）这种类型，如果您是一个成熟的程序员一定了解类似的数据结构。简单的说它就是一个键对应着一个值。它的类型中仍然包括泛型 HashMap<键的类型, 值的类型> 不过哈希表类型在 Rust 中有一个特殊的要求，就是其键的类型必须的可哈希的。具体在 Rust 中表现为类型实现了 Hash 特征（trait）的类型。而且 Rust 还额外需要您键的类型是可比较的也就是实现了 PartialEq 和 Eq 的特征。
+
+
+我们首先要实现的功能就是联系人的增加和查询，以及整个联系人列表的新建。初步的可以把程序写成：
+
+```
+use std::fmt;
+use std::collections::HashMap;
+
+#[derive(Clone)]
+struct Contact {
+    name: String,
+    phone: String,
+}
+
+impl Contact {
+    fn new<T: Into<String>>(new_name: T, new_phone: T) -> Self {
+        Contact {
+            name: new_name.into(),
+            phone: new_phone.into(),
+        }
+    }
+}
+
+impl fmt::Debug for Contact {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(f, "联系人: {}\n电话: {}", self.name, self.phone)
+    }
+}
+
+#[derive(Clone)]
+struct ContactsData {
+    list: Vec<Contact>,
+    index: HashMap<String, usize>,
+}
+
+impl ContactsData {
+    fn new() -> Self {
+        ContactsData {
+            list: Vec::new(),
+            index: HashMap::new(),
+        }
+    }
+
+	// 这里有一个可变引用，可以把它简单理解为给引用加上了可变性
+    fn add<T: Into<String>>(&mut self, new_name: T, new_phone: T) {
+        let name = new_name.into();
+        self.list.push(Contact::new(name.clone(), new_phone.into()));
+        if self.index.contains_key(&name) {
+            println!("已有同名联系人");
+        } else {
+            self.index.insert(name.clone(), self.list.len() - 1);
+        }
+    }
+
+    fn query<T: Into<String>>(&self, name: T) -> Option<Contact> {
+        if let Some(query_index) = self.index.get(&name.into()) {
+            Some(self.list[*query_index].clone())
+        } else {
+            None
+        }
+    }
+    
+    fn print_query<T: Into<String>>(&self, name: T) {
+        let _name = name.into();
+        match self.query(_name.clone()) {
+            Some(query_result) => println!("{:?}", query_result),
+            _ =>  println!("没有找到联系人\"{}\"", _name),
+        }
+    }
+}
+
+fn main() {
+    let mut contacts = ContactsData::new();
+    contacts.add("刘祺", "156********");
+    contacts.add("张三", "130********");
+    contacts.print_query("刘祺");
+}
+```
+
+我们最先注意到底就是我们都使用 #[derive(Clone)] 为两个函数自动实现了一个新的特征 Clone。这个特征和 Rust 中的所有权系统有关。对于初学者来说，Rust 语言中的所有权系统简直就是最臭名昭著的东西。以至于很多没有学习过 Rust 语言的人都知道它的污名。实际上它是一个好用不好学的概念。一旦学会就会非常好用。这里我们采用一种简单途径来学习所有权系统——即笔者先不介绍所有权系统的概念，而是先讲解一些使用上的经验和投机取巧的办法。来让大家体会一下所有权，等到我们已经能够熟练的使用这种编程套路之后，再来系统的讲解它的概念。所有权系统是为了更科学的维护和管理内存而提出的。它的主要思想就是不让一个变量到处乱用，造成内存的难以维护。在 Rust 中我们一个变量如果直接扔给一个函数，那么这个变量就整体被这个函数拿走了（函数获得了变量的所有权）。也就是说您相当于把变量送给了一个函数，这样这个变量就再也不是您的了，您不能把它在送给另一个函数。这是一直常见的错误叫做“use of moved value”。在 Rust 中这是被禁止的。那么当您想给一个函数传递一个值的时候，最好就是您不要主动把变量送给函数啦，最好是让函数来借。这就产生了借用和引用。当然主要就表现为引用。当函数的某一个参数前出现了 & 符号，那么就说明这个参数函数要管别人去借。俗话说“好借好还，再借不难”。也就是说函数并不持有这个变量的所有权，只是借一下。用完了以后这个参数会还回去。那么这个参数当然就可以随便借给多个函数啦。不过有的时候借东西也会对东西本事造成改变。譬如说您和别人借钱肯定要如数奉还，不过有的时候我们还有利息的问题。（笑）那么函数也是这样，这就产生了可变引用。也就是对变量产生了改变的情况。不过还有的时候如果用引用实在是不方便，或者借出去的东西不用还，譬如说生活中我们经常会借纸巾。那么这种东西是不用还的，不过您是想保留这个变量，那么就产生了克隆（clone）。克隆是指实现了 Clone 特征的类型调用 clone 函数的过程。这里需要特别注意，虽然克隆的特征和函数调用的拼写是一样的。不过它们的大小写是不一致的。而 Rust 又是区分大小写的语言。这里就用到了我们之前说的技巧，所以我们可以判断出开头大写的是特征，完全小写的是函数。因为特征是一个独立的项，所以用开头大写的驼峰式写法，而函数是用全小写的蛇形写法。对于一个引用值的类型也是引用。所以有的时候您需要通过 * 来解引用。
+
+除此之外我们还遇到了 Option 类型的数据。这是一个有意思的类型，在 Rust 中会考虑值为空的情况。所以就有了 Option 类型。它是 Rust 中的枚举，不过它相当于别的语言里面的共用体和枚举的组合形式。它的值是 Some(值) 或 None。前者表示存在一个值，后者表示值为空。这里我们用了两种方法来匹配 Option 类型。比较常规的是用 match，譬如说这样写：
+
+```
+match self.query(_name.clone()) {
+    Some(query_result) => println!("{:?}", query_result),
+    _ =>  println!("没有找到联系人\"{}\"", _name),
+}
+```
+
+Rust 的编程哲学是要穷举所有情况。用 _ 来表示未考虑的其它情况。对于枚举类型您也可以穷举它的所有情况啦。截止到笔者写作的时候，Rust 对数值类型进行穷举上还存在着一定的缺陷。所以建议您总是要写 _ 来表示未明确考虑的情况。您可以参考官方 GitHub 的讨论页面中的 issue #12483 和 issue #30578。类似的讨论还有 issue #45590。
+
+另外一种就是比较简明，而且是比较推荐的高手做法。即使用 if let 的语法糖：
+
+```
+if let Some(query_index) = self.index.get(&name.into()) {
+    Some(self.list[*query_index].clone())
+} else {
+   None
+}
+```
+
+它实际上就是 match 的意思，不过它允许不写 else。就显得更为清爽了。这是 Rust 高手更喜欢的做法。
