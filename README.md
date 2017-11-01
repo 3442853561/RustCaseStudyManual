@@ -1,3 +1,3 @@
-# Rust Case Study Manual
+# Rust 程序设计语言实例教程
 
-The Rust Programming Language Case Study Manual
+本作品采用知识共享署名-禁止演绎 4.0 国际许可协议进行许可
