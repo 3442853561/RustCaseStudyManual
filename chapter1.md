@@ -33,13 +33,13 @@ https://github.com/3442853561/rust-housework/blob/master/batch/update.sh
 
 Rust允许我们使用汉字作为标识符了，不过您必须选择 Nightly 版本的 Rust 进行开发。并需要在开头写上：
 
-```
+```rust
 #![feature(non_ascii_idents)]
 ```
 
 我们的第一个程序是这样的：
 
-```
+```rust
 #![feature(non_ascii_idents)]
 
 #[derive(Debug)]
@@ -66,7 +66,7 @@ fn main() {
 
 不过对于任何一个有经验的开发者来说，使用汉字作为标识符都是非常不舒服的行为。因为您必须要在中文和英文的输入法之间来回切换，而且有的时候编译器会仅仅是因为使用了汉字就进行报错。而使用英语字母则不会出现这个问题。这里笔者举这个例子只是为了告诉您 Rust 是可以把汉字当做标识符的，而不是鼓励您这样做。与之相反，任何一个成熟的程序员都应该对这种做法嗤之以鼻。此外把汉语拼音当做标识符仍然是不妥的。因为在我们的语言里面，存在着同音异意的词汇。这很容易引起误解。对于标识符的选择来说，如果您的母语本来就是属于类似英语的语言，譬如说西班牙语。那么您去掉几个重音符号也许勉强还能接受。不过如果您的母语是像中文、日语这样存在大量汉字的语言。那么，建议您还是老老实实地把标识符写成英语。当我们修改之后程序就变成了：
 
-```
+```rust
 #[derive(Debug)]
 struct Contact {
     name: String,
@@ -91,7 +91,7 @@ fn main() {
 
 现在这个程序就舒服多了。我们来讲解一些这个程序都干了什么。以及怎么干的。当然了鉴于本教程的读者都应该是有经验的程序员。笔者并不会巨细靡遗地讲解什么是主函数，主函数是程序的入口之类的话题。我们会发现 `fn` 实际上是一个关键字来表示函数（在 C# 之类的语言里面叫做方法）那么 `fn main()` 是程序的主函数。也就是程序的入口。我们从这里看起。第一句是： `let mut contacts_list: Vec<Contact> = Vec::new();` 这句话定义了一个 `Vec<Contact>` 类型的 `contacts_list` 变量。在 Rust 中这叫做绑定，和定义变量的含义并不完全相同，不过目的是一样的。`Vec<Contact>` 是一个带有泛型的类型。它的含义相当于每个元素都是 `Contact` 类型的栈，不过这个东西实际上叫动态数组。它包括 `push`、`pop` 等一系列方法。第二句是 `contacts_list.push(Contact::new("刘祺", "156********"));` 这是为 `contacts_list` 数组增加（`push`）了一个元素。这个元素是 `Contact::new("刘祺", "156********")` 这个方法的返回值。具体这个方法是什么我们一会儿再说。最后一句是 `println!("{:?}", contacts_list[0]);` 它的含义是以 debug 的方式输出 `contacts_list` 数组中下标为0的元素。 `{:?}` 的含义是以 debug 方式的意思。 想要使用 `{:?}` 必须要明确输出的内容已经实现了一个叫做 `Debug` 的特征。在程序的最开始我们写了这样几行代码：
 
-```
+```rust
 #[derive(Debug)]
 struct Contact {
     name: String,
@@ -101,7 +101,7 @@ struct Contact {
 
 第一句就是为下面紧挨着的构造类型（或枚举类型）实现 `Debug` 特征的意思。下面构建了一个构造类型。相当于 C++，Java 和 C# 中类中的数据的部分。下面的 `impl` 则是相当于类的方法，在 Rust 中叫做方法语法。不过 Rust 中为了让您能够好好写程序把数据和方法分开处理了。您不能认为方法语法和构造类型就等于类。这是很不一样的东西。因为在 Rust 中，数据没有继承。而对于方法的继承也要通过特征来实现。这样做有一个好处就是避免了多继承中的菱形继承。而且还能把数据和方法分开管理。方法语法中的函数（方法）默认是私有的。不过我们现在没有分文件，也就没有必要对其进行公开（`pub`）。这个函数实现的功能是返回一个自身的类型，来构建一个新的 `Contact` 类型的值。`Self` 的意思就是自身的类型，这里代指 `Contact`。在函数末尾的 `->` 用来标注返回值的类型。函数中实际上只有一个表达式：
 
-```
+```rust
 Contact {
     name: new_name.into(),
     phone: new_phone.into(),
@@ -110,7 +110,7 @@ Contact {
 
 注意这一部分是一条表达式，而不是一条语句。在 Rust 中函数的最后一个表达式的计算结果代表返回值。如果您给它加上分号改成语句是不可以的。此外我们还没有讲 `T: Into<String>` 是什么东西。`T` 这里是一个泛型。它又一个约束条件，就是实现了 `Into<String>` 的类型。凡是实现了 `Into<String>` 特征的类型都可以通过值在后面接一个 `.into()` 来转换成一个 `String` 类型的值。用双引号包裹的值的类型是 `&str` 而不是 `String`。所以这里需要这个泛型来简化编程。我们为了让程序变得美一点儿可以把它改写成：
 
-```
+```rust
 use std::fmt;
 
 struct Contact {
@@ -142,7 +142,7 @@ fn main() {
 
 这里我们发现多了两个东西，一个是 `use std::fmt;` 这条语句的意思是使用一个模块。类似于 C++ 里面的名字空间。这个名字空间实际上来自于标准库。标准库中的一大部分内容实际上都会被默认引入，不过还是有一些内容需要我们手动的去引入。另一个大家伙就是：
 
-```
+```rust
 impl fmt::Debug for Contact {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "联系人: {}\n电话: {}", self.name, self.phone)
@@ -152,7 +152,7 @@ impl fmt::Debug for Contact {
 
 这个东西就是特征（`trait`）的实现。有一个叫做 `Debug` 的特征已经在标准库里面写好了，我们这里只是把它实现一下。这类似于 C# 里面的接口。`impl fmt::Debug for Contact` 的意思是为 `Contact` 类型实现 `Debug` 特征。里面有一个 `fmt` 函数（方法）：
 
-```
+```rust
 fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     write!(f, "联系人: {}\n电话: {}", self.name, self.phone)
 }
@@ -162,7 +162,7 @@ fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
 
 那么接下来为了方便联系人列表的增删改查我们最好还是为其建立一个数据结构。
 
-```
+```rust
 use std::collections::HashMap;
 
 struct ContactsData {
@@ -178,7 +178,7 @@ struct ContactsData {
 
 我们首先要实现的功能就是联系人的增加和查询，以及整个联系人列表的新建。初步的可以把程序写成：
 
-```
+```rust
 use std::fmt;
 use std::collections::HashMap;
 
@@ -257,7 +257,7 @@ fn main() {
 
 除此之外我们还遇到了 `Option` 类型的数据。这是一个有意思的类型，在 Rust 中会考虑值为空的情况。所以就有了 `Option` 类型。它是 Rust 中的枚举，不过它相当于别的语言里面的共用体和枚举的组合形式。它的值是 `Some`(值) 或 `None`。前者表示存在一个值，后者表示值为空。这里我们用了两种方法来匹配 `Option` 类型。比较常规的是用 `match`，譬如说这样写：
 
-```
+```rust
 match self.query(_name.clone()) {
     Some(query_result) => println!("{:?}", query_result),
     _ =>  println!("没有找到联系人\"{}\"", _name),
@@ -268,7 +268,7 @@ Rust 的编程哲学是要穷举所有情况。用 _ 来表示未考虑的其它
 
 另外一种就是比较简明，而且是比较推荐的高手做法。即使用 `if let` 的语法糖：
 
-```
+```rust
 if let Some(query_index) = self.index.get(&name.into()) {
     Some(self.list[*query_index].clone())
 } else {
