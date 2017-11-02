@@ -217,7 +217,7 @@ impl ContactsData {
         }
     }
 
-	// 这里有一个可变引用，可以把它简单理解为给引用加上了可变性
+    // 这里有一个可变引用，可以把它简单理解为给引用加上了可变性
     fn add<T: Into<String>>(&mut self, new_name: T, new_phone: T) {
         let name = new_name.into();
         self.list.push(Contact::new(name.clone(), new_phone.into()));
@@ -229,19 +229,18 @@ impl ContactsData {
     }
 
     fn query<T: Into<String>>(&self, name: T) -> Option<Contact> {
-        if let Some(query_index) = self.index.get(&name.into()) {
-            Some(self.list[*query_index].clone())
-        } else {
-            None
+        match self.index.get(&name.into()) {
+            Some(query_index) => Some(self.list[*query_index].clone()),
+            _ => None,
         }
     }
-    
-    fn print_query<T: Into<String>>(&self, name: T) {
+
+    fn get_query_result_string<T: Into<String>>(&self, name: T) -> String {
         let _name = name.into();
-        match self.query(_name.clone()) {
-            Some(query_result) => println!("{:?}", query_result),
-            _ =>  println!("没有找到联系人\"{}\"", _name),
+        if let Some(query_result) = self.query(_name.clone()) {
+            return format!("{:?}", query_result);
         }
+        format!("没有找到联系人\"{}\"", _name)
     }
 }
 
@@ -249,18 +248,18 @@ fn main() {
     let mut contacts = ContactsData::new();
     contacts.add("刘祺", "156********");
     contacts.add("张三", "130********");
-    contacts.print_query("刘祺");
+    println!("{}", contacts.get_query_result_string("刘祺"));
 }
 ```
 
-我们最先注意到底就是我们都使用 `#[derive(Clone)]` 为两个函数自动实现了一个新的特征 `Clone`。这个特征和 Rust 中的所有权系统有关。对于初学者来说，Rust 语言中的所有权系统简直就是最臭名昭著的东西。以至于很多没有学习过 Rust 语言的人都知道它的污名。实际上它是一个好用不好学的概念。一旦学会就会非常好用。这里我们采用一种简单途径来学习所有权系统——即笔者先不介绍所有权系统的概念，而是先讲解一些使用上的经验和投机取巧的办法。来让大家体会一下所有权，等到我们已经能够熟练的使用这种编程套路之后，再来系统的讲解它的概念。所有权系统是为了更科学的维护和管理内存而提出的。它的主要思想就是不让一个变量到处乱用，造成内存的难以维护。在 Rust 中我们一个变量如果直接扔给一个函数，那么这个变量就整体被这个函数拿走了（函数获得了变量的所有权）。也就是说您相当于把变量送给了一个函数，这样这个变量就再也不是您的了，您不能把它在送给另一个函数。这是一直常见的错误叫做“use of moved value”。在 Rust 中这是被禁止的。那么当您想给一个函数传递一个值的时候，最好就是您不要主动把变量送给函数啦，最好是让函数来借。这就产生了借用和引用。当然主要就表现为引用。当函数的某一个参数前出现了 `&` 符号，那么就说明这个参数函数要管别人去借。俗话说“好借好还，再借不难”。也就是说函数并不持有这个变量的所有权，只是借一下。用完了以后这个参数会还回去。那么这个参数当然就可以随便借给多个函数啦。不过有的时候借东西也会对东西本事造成改变。譬如说您和别人借钱肯定要如数奉还，不过有的时候我们还有利息的问题。（笑）那么函数也是这样，这就产生了可变引用。也就是对变量产生了改变的情况。不过还有的时候如果用引用实在是不方便，或者借出去的东西不用还，譬如说生活中我们经常会借纸巾。那么这种东西是不用还的，不过您是想保留这个变量，那么就产生了克隆（`clone`）。克隆是指实现了 `Clone` 特征的类型调用 `clone` 函数的过程。这里需要特别注意，虽然克隆的特征和函数调用的拼写是一样的。不过它们的大小写是不一致的。而 Rust 又是区分大小写的语言。这里就用到了我们之前说的技巧，所以我们可以判断出开头大写的是特征，完全小写的是函数。因为特征是一个独立的项，所以用开头大写的驼峰式写法，而函数是用全小写的蛇形写法。对于一个引用值的类型也是引用。所以有的时候您需要通过 `*` 来解引用。
+我们最先注意到底就是我们都使用 `#[derive(Clone)]` 为两个函数自动实现了一个新的特征 `Clone`。这个特征和 Rust 中的所有权系统有关。对于初学者来说，Rust 语言中的所有权系统简直就是最臭名昭著的东西。以至于很多没有学习过 Rust 语言的人都知道它的污名。（笔者猜测有一部分没有使用 C 语言在实际工作项目中的人可能感觉不到这种污名）实际上它是一个好用不好学的概念。（当然也只是对像笔者这样反应有些迟钝的人不太好学）一旦学会就会非常好用。这里我们采用一种简单途径来学习所有权系统——即笔者先不介绍所有权系统的概念，而是先讲解一些使用上的经验和投机取巧的办法。来让大家体会一下所有权，等到我们已经能够熟练的使用这种编程套路之后，再来系统的讲解它的概念。所有权系统是为了更科学的维护和管理内存而提出的。它的主要思想就是不让一个变量到处乱用，造成内存的难以维护。在 Rust 中我们一个变量如果直接扔给一个函数，那么这个变量就整体被这个函数拿走了（函数获得了变量的所有权）。也就是说您相当于把变量送给了一个函数，这样这个变量就再也不是您的了，您不能把它在送给另一个函数。这是一直常见的错误叫做“use of moved value”。在 Rust 中这是被禁止的。那么当您想给一个函数传递一个值的时候，最好就是您不要主动把变量送给函数啦，最好是让函数来借。这就产生了借用和引用。当然主要就表现为引用。当函数的某一个参数前出现了 `&` 符号，那么就说明这个参数函数要管别人去借。俗话说“好借好还，再借不难”。也就是说函数并不持有这个变量的所有权，只是借一下。用完了以后这个参数会还回去。那么这个参数当然就可以随便借给多个函数啦。不过有的时候借东西也会对东西本事造成改变。譬如说您和别人借钱肯定要如数奉还，不过有的时候我们还有利息的问题。（笑）那么函数也是这样，这就产生了可变引用。也就是对变量产生了改变的情况。不过还有的时候如果用引用实在是不方便，或者借出去的东西不用还，譬如说生活中我们经常会借纸巾。那么这种东西是不用还的，不过您是想保留这个变量，那么就产生了克隆（`clone`）。克隆是指实现了 `Clone` 特征的类型调用 `clone` 函数的过程。这里需要特别注意，虽然克隆的特征和函数调用的拼写是一样的。不过它们的大小写是不一致的。而 Rust 又是区分大小写的语言。这里就用到了我们之前说的技巧，所以我们可以判断出开头大写的是特征，完全小写的是函数。因为特征是一个独立的项，所以用开头大写的驼峰式写法，而函数是用全小写的蛇形写法。对于一个引用值的类型也是引用。所以有的时候您需要通过 `*` 来解引用。
 
 除此之外我们还遇到了 `Option` 类型的数据。这是一个有意思的类型，在 Rust 中会考虑值为空的情况。所以就有了 `Option` 类型。它是 Rust 中的枚举，不过它相当于别的语言里面的共用体和枚举的组合形式。它的值是 `Some`(值) 或 `None`。前者表示存在一个值，后者表示值为空。这里我们用了两种方法来匹配 `Option` 类型。比较常规的是用 `match`，譬如说这样写：
 
 ```rust
-match self.query(_name.clone()) {
-    Some(query_result) => println!("{:?}", query_result),
-    _ =>  println!("没有找到联系人\"{}\"", _name),
+ match self.index.get(&name.into()) {
+    Some(query_index) => Some(self.list[*query_index].clone()),
+    _ => None,
 }
 ```
 
@@ -269,11 +268,96 @@ Rust 的编程哲学是要穷举所有情况。用 _ 来表示未考虑的其它
 另外一种就是比较简明，而且是比较推荐的高手做法。即使用 `if let` 的语法糖：
 
 ```rust
-if let Some(query_index) = self.index.get(&name.into()) {
-    Some(self.list[*query_index].clone())
-} else {
-   None
+if let Some(query_result) = self.query(_name.clone()) {
+    return format!("{:?}", query_result);
 }
 ```
 
-它实际上就是 `match` 的意思，不过它允许不写 `else`。就显得更为清爽了。这是 Rust 高手更喜欢的做法。
+它实际上就是 `match` 的意思，不过它允许不写 `else`。就显得更为清爽了。这是 Rust 高手更喜欢的做法。不过这个例子实际上有一个丑陋的地方，实际上它写成 `match` 也不会混乱到什么地方去。因为它使用 `return` 提前返回。而我们如果不使用 `return` 就必须给 `if let` 加上一个 `else`。这里需要注意 `if let` 是可以加上 `else` 的。不过这可能导致让代码更加混乱、有一点儿像是画蛇添足的做法：
+
+```rust
+if let Some(query_result) = self.query(_name.clone()) {
+    format!("{:?}", query_result)
+} else {
+    format!("没有找到联系人\"{}\"", _name)
+}
+```
+
+这样写实在不是很好看呢。它使用 `match` 的写法都要比使用 `if let` 与 `else` 配合的这种写法整洁一些:
+
+```rust
+match self.query(_name.clone()) {
+    Some(query_result) => format!("{:?}", query_result),
+    _ => format!("没有找到联系人\"{}\"", _name),
+}
+```
+
+这里有一个典型的示范，证明连最开始的例子中的 `if let` 的用法也是不太美观的。笔者认为那种写法更像是从 C 语言的避免多层分支语句嵌套留下来的后遗症。让我们来看看标准库中的 `unwrap` 函数（方法）是怎么写的：
+
+```rust
+pub fn unwrap(self) -> T {
+    match self {
+        Some(val) => val,
+        None => panic!("called `Option::unwrap()` on a `None` value"),
+    }
+}
+```
+
+这里的泛型 `T` 我们暂时不去管它，这里就是 `Some` 里面包裹的值的类型的意思。您可以把它简单理解为随便一个类型。如果我们硬是要改写成 `if let` 也是可以做到的，只是比较丑陋：
+
+```rust
+pub fn unwrap(self) -> T {
+    if let Some(val) = self {
+        return val;
+    }
+    panic!("called `Option::unwrap()` on a `None` value");
+}
+```
+
+说来说去，`if let` 似乎只有当您的另外的匹配什么都不需要做的时候用起来比较方便，譬如：
+
+```rust
+fn foo<T: Into<Option<u8>>>(bar: T) -> i16 {
+    let mut result = -1;
+    if let Some(x) = bar.into() {
+        result = x as i16;
+    }
+    
+    // 这里可能还有若干条涉及 result 的语句
+    
+    result
+}
+
+fn main() {
+    println!("值为 {{0}} 的时候的结果: {}", foo(0));
+    println!("值为 {{None}} 的时候的结果: {}", foo(None));
+}
+```
+
+这里我们先来讲一下新鲜的事物：`Into<Option<u8>>`。这里实际上是对泛型 `T` 的一个约束。也就是说泛型 `T` 是一个需要实现了 `Into<Option<u8>>` 特征的类型。这个约束保证了它是可选的。当然了您也可以直接把参数 `bar` 的类型定义为 `Option<u8>`。不过这有一个问题就是您每次调用函数的时候都要写 `Some(值)` 或者 `None`。当然了如果您没有“这里可能还有若干条涉及 `result` 的语句”的时候，笔者希望您能够这样写：
+
+```rust
+fn foo<T: Into<Option<u8>>>(bar: T) -> i16 {
+    match bar.into() {
+        Some(x) => x as i16,
+        None => -1, // 这里把 None 写成 _ 也是可以的
+    }
+}
+```
+
+不过当您仅需要在函数中设置一个可选参数。那么您使用 `if let` 也不是非常优美的做法，因为存在更加简单明了的做法：
+
+```rust
+fn hoge<T>(piyo: T) -> u8 
+where T: Into<Option<u8>> {
+    let mut result = piyo.into().unwrap_or(0);
+    
+    // 这里可能还有若干条涉及 result 的语句
+    
+    result  
+}
+```
+
+这里我们又涉及了一个新的关键字 `where` 这个关键字的常规用途实际上是用于描述多个泛型之间的较复杂的约束关系。不过这里我们单纯的是把它用于单个泛型约束。有的时候泛型过多或过长的时候我们也会用到这个关键字。这里只是为了各位读者对这个关键字的含义能够有一个初步的了解，以至于我们后面写到较复杂的关系的时候您不会感到陌生。一种典型的错误理解就是 `where` 是避免前面泛型写得过长而加上的语法糖。即使，我们经常是这样使用 `where` 的。不过它的常规用法（也就是只能使用 `where` 关键字的场合）实际上是描述两个或更多泛型之间存在一种依赖譬如： `where T:Into<U>, U:Into<T>` 这种情况。
+
+此外，如果您拿不准什么时候使用 `if let` 可以安装 Clippy，当您的代码适合做出这样的调整的时候它会以警告的形式给出提示。
