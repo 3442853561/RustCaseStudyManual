@@ -361,3 +361,114 @@ where T: Into<Option<u8>> {
 这里我们又涉及了一个新的关键字 `where` 这个关键字的常规用途实际上是用于描述多个泛型之间的较复杂的约束关系。不过这里我们单纯的是把它用于单个泛型约束。有的时候泛型过多或过长的时候我们也会用到这个关键字。这里只是为了各位读者对这个关键字的含义能够有一个初步的了解，以至于我们后面写到较复杂的关系的时候您不会感到陌生。一种典型的错误理解就是 `where` 是避免前面泛型写得过长而加上的语法糖。即使，我们经常是这样使用 `where` 的。不过它的常规用法（也就是只能使用 `where` 关键字的场合）实际上是描述两个或更多泛型之间存在一种依赖譬如： `where T:Into<U>, U:Into<T>` 这种情况。
 
 此外，如果您拿不准什么时候使用 `if let` 可以安装 Clippy，当您的代码适合做出这样的调整的时候它会以警告的形式给出提示。
+
+实际上我们通讯录的程序仍然是不完善的，因为我们没有考虑重名的联系人和一个人用多个电话的这两种情况。于是我们把程序作出一些简单的调整，让其支持这两个新功能：
+
+```
+use std::fmt;
+use std::collections::HashMap;
+
+#[derive(Clone)]
+struct Contact {
+    name: String,
+    phone: Vec<String>,
+}
+
+impl Contact {
+    fn new<T: Into<String>>(new_name: T, new_phone: Vec<String>) -> Self {
+        Contact {
+            name: new_name.into(),
+            phone: new_phone,
+        }
+    }
+}
+
+impl fmt::Debug for Contact {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        let mut result = format!("联系人: {}", self.name);
+		
+		// 注意此处 for 循环的使用
+        for (num, phone) in self.phone.iter().enumerate() {
+            result = format!("{}\n电话{}: {}", result, num + 1, phone);
+        }
+        write!(f, "{}", result)
+    }
+}
+
+#[derive(Clone)]
+struct ContactsData {
+    list: Vec<Contact>,
+    index: HashMap<String, Vec<usize>>,
+}
+
+impl ContactsData {
+    fn new() -> Self {
+        ContactsData {
+            list: Vec::new(),
+            index: HashMap::new(),
+        }
+    }
+
+    fn add<T: Into<String>>(&mut self, new_name: T, new_phone: Vec<String>) {
+        let name = new_name.into();
+        self.list.push(Contact::new(name.clone(), new_phone));
+
+        // 请注意这里的修改
+        let person = self.index.entry(name.clone()).or_insert(Vec::new());
+        person.push(self.list.len() - 1);
+    }
+
+    fn query<T: Into<String>>(&self, name: T) -> Vec<Contact> {
+        let mut result: Vec<Contact> = Vec::new();
+        if let Some(query_index) = self.index.get(&name.into()) {
+            for i in query_index {
+                result.push(self.list[*i].clone());
+            }
+        }
+        result
+    }
+
+    fn get_query_result_string<T: Into<String>>(&self, name: T) -> String {
+        let _name = name.into();
+        if self.query(_name.clone()).is_empty() {
+            return format!("没有找到联系人\"{}\"", _name);
+        }
+
+        let mut result = format!(
+            "根据姓名\"{}\"找到了{}位联系人",
+            _name.clone(),
+            self.query(_name.clone()).len()
+        );
+        for query_result in self.query(_name.clone()) {
+            result = format!("{}\n----------\n{:?}", result, query_result);
+        }
+        result
+    }
+}
+
+fn main() {
+    let mut contacts = ContactsData::new();
+    contacts.add("刘祺", vec!["156********".to_string(), "130********".to_string()]);
+    contacts.add("张三", vec!["130********".to_string()]);
+    contacts.add("张三", vec!["156********".to_string()]);
+    println!("{}", contacts.get_query_result_string("刘祺"));
+    println!();
+    println!("{}", contacts.get_query_result_string("张三"));
+    println!();
+    println!("{}", contacts.get_query_result_string("王五"));
+}
+```
+
+笔者这里又引入了不少新东西。老规矩，我们从主函数看起。主函数里面的新东西还算比较少的。一个是 `vec!` 宏。这个宏用于创建一个可变数组并为其填充若干个初值。其次 `"130********".to_string()` 也是一个新东西。我们知道用双引号包裹的值的类型是 `&str` 而不是 `String`。那么 `to_string` 函数就可以把其转换为一个 `String` 类型的值。
+
+
+接下来我们来看比较简单的 `add` 函数中的新内容：
+
+```
+let person = self.index.entry(name.clone()).or_insert(Vec::new());
+person.push(self.list.len() - 1);
+```
+
+这是为了接受重名的联系人而准备的。这里比较需要讲的就是 `entry` 函数。它的一个使用技巧是统计某个字符串里面包含的各个字母分别有多少个。这也是标准库中给出的例子。不过它有一个比这种用法更为常规的用法，就是直接把哈希表中的一个元素拿出来直接修改。这里有一个模板，如果您懒得翻标准库去了解它具体是怎么写的可以参考它： `哈希表.entry(键).or_insert(如果键不存在插入的东西)`。
+
+由于 Rust 的标准库是非常语义化的，以至于很多函数都不需要翻看标准库也能知道是做什么用的。譬如 `is_empty` 函数是返回值是否为空的。那么如果遇到了陌生的函数您可以翻阅标准库的文档。其文档的在线版本的网址是 [https://doc.rust-lang.org/std](https://doc.rust-lang.org/std) 。标准库中的内容十分丰富，我们不可能一一赘述，所以这里笔者更愿意与您分享的是一种编程的方法，而不是逐句的把程序解释给您听。那是编译器和解释器干的事情。
