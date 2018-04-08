@@ -57,7 +57,9 @@ struct Matrix<T: Clone> {
 
 ```rust
 impl<T: Clone> Matrix<T> {
-    fn new(new_width: usize, new_height: usize, new_default: T) -> Self {
+    // 这里的 new_height 和 new_width 的顺序是颠倒的
+    // 理由是线性代数中习惯把纵向信息放在前面
+    fn new(new_height: usize, new_width: usize, new_default: T) -> Self {
         Matrix {
             size: (new_width, new_height),
             data: vec![new_default.clone(); new_width * new_height],
@@ -100,3 +102,4 @@ fn test_new_matrix() {
 ```shell
 cargo test -- --nocapture
 ```
+
