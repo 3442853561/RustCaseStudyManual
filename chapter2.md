@@ -142,6 +142,7 @@ where T: Clone + fmt::Debug{
         }
     
         if height > width {
+            // 这里有一个逻辑漏洞，我们以后再说
             result += "┌ ";
             for _ in 0..(max_len_value + 1)*height {
                 result += " ";
@@ -242,6 +243,7 @@ where T: Clone + fmt::Debug{
         }
     
         if height > width {
+            // 这里有一个逻辑漏洞，我们以后再说
             result += "┌ ";
             for _ in 0..(max_len_value + 1)*height {
                 result += " ";
@@ -306,5 +308,36 @@ fn test_new_matrix() {
 }
 ```
 
+接下来我们发现每次访问矩阵中的元素都不太方便，所以我们为其添加方便访问的一些特征。主要就是下面的 ```Index``` 和 ```IndexMut``` 这两个特征：
+
+```rust
+use std::ops::{Index, IndexMut};
+
+impl<T: Clone> Index<(usize, usize)> for Matrix<T> {
+    type Output = T;
+    fn index(&self, ind: (usize, usize)) -> &T {
+        let (i, j) = ind;
+        let (width, _) = self.size;
+        &self.data[i*width+j]
+    }
+}
+
+impl<T: Clone> IndexMut<(usize, usize)> for Matrix<T> {
+    fn index_mut(&mut self, ind: (usize, usize)) -> &mut T {
+        let (i, j) = ind;
+        let (width, _) = self.size;
+        &mut self.data[i*width+j]
+    }
+}
+
+#[test]
+fn test_matrix_can_get_set() {
+    let mut my_matrix = Matrix::new(2, 5, 0);
+    my_matrix[(0, 1)] = 1;
+    println!("{:?}", my_matrix);
+}
+```
+
+写到这里您就会发现我们之前说的逻辑漏洞在什么地方，这里我们顺便把我们之前写的内容重构一下。
 
 
