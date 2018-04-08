@@ -103,3 +103,208 @@ fn test_new_matrix() {
 cargo test -- --nocapture
 ```
 
+这里我们总是在 ```debug``` 里面写似乎不是一个好的解决方案，所以我们为其实现 ```ToString``` 特征：
+
+```rust
+use std::fmt;
+impl<T: Clone + fmt::Debug> fmt::Debug for Matrix<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+```
+
+阅读下面的代码您会发现我们不仅仅是把代码转移了位置，并且增加了在矩阵过长时显示其转置矩阵的功能：
+
+```rust
+impl<T> ToString for Matrix<T> 
+where T: Clone + fmt::Debug{
+    fn to_string(&self) -> String {
+        let mut result = "".to_string();
+        let (width, height) = self.size;
+
+        if height == 1 {
+            result += "[ ";
+            for w in 0..width {
+                result += &*format!("{:?} ", self.data[w]);
+            }
+            result += "]";
+            return result;
+        }
+
+        // 这一部分是获取输出的最大对齐
+        let mut max_len_value = 0;
+        for x in &self.data {
+            let len = format!("{:?}", x).len();
+            if len > max_len_value {
+                max_len_value = len;
+            }
+        }
+    
+        if height > width {
+            result += "┌ ";
+            for _ in 0..(max_len_value + 1)*height {
+                result += " ";
+            }
+            result += "┐T\n";
+            for w in 0..width {
+                result += "│ ";
+                for h in 0..height {
+                    result += &*format!("{:?}", self.data[w*height+h]);
+                    for _ in format!("{:?}",self.data[w*height+h]).len()..max_len_value + 1{
+                        result += " ";
+                    }
+                }
+                result += "│\n";
+            }
+            result += "└ ";
+            for _ in 0..(max_len_value + 1)*height {
+                result += " ";
+            }
+            result += "┘";
+        } else {
+            result += "┌ ";
+            for _ in 0..(max_len_value + 1)*height {
+                result += " ";
+            }
+            result += "┐\n";
+            for h in 0..height {
+                result += "│ ";
+                for w in 0..width {
+                    result += &*format!("{:?}", self.data[h*width+w]);
+                    for _ in format!("{:?}",self.data[h*width+w]).len()..max_len_value + 1{
+                        result += " ";
+                    }
+                }
+                result += "│\n";
+            }
+            result += "└ ";
+            for _ in 0..(max_len_value + 1)*height {
+                result += " ";
+            }
+            result += "┘";
+        }
+        result
+    }
+}
+```
+
+增加完这部分代码后我们发现原本的 ```lib.rs``` 文件已经非常长了，这对于我们日后维护是一个极大的障碍。所以我们现在就对其进行分文件处理，在 ```lib.rs``` 只保留：
+
+```rust
+pub mod matrix;
+```
+
+目前的其他内容全选，并复制到名为 ```matrix.rs``` 的文件内，并对需要对外部暴露的自定义方法和类型进行 ```pub```:
+
+```rust
+#[derive(Clone)]
+pub struct Matrix<T: Clone> {
+    size: (usize, usize),
+    data: Vec<T>,
+    default: T,
+}
+
+impl<T: Clone> Matrix<T> {
+    // 这里的 new_height 和 new_width 的顺序是颠倒的
+    // 理由是线性代数中习惯把纵向信息放在前面
+    pub fn new(new_height: usize, new_width: usize, new_default: T) -> Self {
+        Matrix {
+            size: (new_width, new_height),
+            data: vec![new_default.clone(); new_width * new_height],
+            default: new_default,
+        }
+    }
+}
+
+impl<T> ToString for Matrix<T> 
+where T: Clone + fmt::Debug{
+    fn to_string(&self) -> String {
+        let mut result = "".to_string();
+        let (width, height) = self.size;
+
+        if height == 1 {
+            result += "[ ";
+            for w in 0..width {
+                result += &*format!("{:?} ", self.data[w]);
+            }
+            result += "]";
+            return result;
+        }
+
+        // 这一部分是获取输出的最大对齐
+        let mut max_len_value = 0;
+        for x in &self.data {
+            let len = format!("{:?}", x).len();
+            if len > max_len_value {
+                max_len_value = len;
+            }
+        }
+    
+        if height > width {
+            result += "┌ ";
+            for _ in 0..(max_len_value + 1)*height {
+                result += " ";
+            }
+            result += "┐T\n";
+            for w in 0..width {
+                result += "│ ";
+                for h in 0..height {
+                    result += &*format!("{:?}", self.data[w*height+h]);
+                    for _ in format!("{:?}",self.data[w*height+h]).len()..max_len_value + 1{
+                        result += " ";
+                    }
+                }
+                result += "│\n";
+            }
+            result += "└ ";
+            for _ in 0..(max_len_value + 1)*height {
+                result += " ";
+            }
+            result += "┘";
+        } else {
+            result += "┌ ";
+            for _ in 0..(max_len_value + 1)*height {
+                result += " ";
+            }
+            result += "┐\n";
+            for h in 0..height {
+                result += "│ ";
+                for w in 0..width {
+                    result += &*format!("{:?}", self.data[h*width+w]);
+                    for _ in format!("{:?}",self.data[h*width+w]).len()..max_len_value + 1{
+                        result += " ";
+                    }
+                }
+                result += "│\n";
+            }
+            result += "└ ";
+            for _ in 0..(max_len_value + 1)*height {
+                result += " ";
+            }
+            result += "┘";
+        }
+        result
+    }
+}
+
+use std::fmt;
+impl<T: Clone + fmt::Debug> fmt::Debug for Matrix<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
+#[test]
+fn test_new_matrix() {
+    let my_matrix = Matrix::new(5, 2, 0);
+    println!("{:?}", my_matrix);
+    let another_matrix = Matrix::new(2, 5, 1);
+    println!("{:?}", another_matrix);
+    let yet_another_matrix = Matrix::new(1, 10, 2);
+    println!("{:?}", yet_another_matrix);
+}
+```
+
+
+
