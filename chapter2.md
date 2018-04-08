@@ -164,7 +164,7 @@ where T: Clone + fmt::Debug{
             result += "┘";
         } else {
             result += "┌ ";
-            for _ in 0..(max_len_value + 1)*height {
+            for _ in 0..(max_len_value + 1)*width {
                 result += " ";
             }
             result += "┐\n";
@@ -179,7 +179,7 @@ where T: Clone + fmt::Debug{
                 result += "│\n";
             }
             result += "└ ";
-            for _ in 0..(max_len_value + 1)*height {
+            for _ in 0..(max_len_value + 1)*width {
                 result += " ";
             }
             result += "┘";
@@ -264,7 +264,7 @@ where T: Clone + fmt::Debug{
             result += "┘";
         } else {
             result += "┌ ";
-            for _ in 0..(max_len_value + 1)*height {
+            for _ in 0..(max_len_value + 1)*width {
                 result += " ";
             }
             result += "┐\n";
@@ -279,7 +279,7 @@ where T: Clone + fmt::Debug{
                 result += "│\n";
             }
             result += "└ ";
-            for _ in 0..(max_len_value + 1)*height {
+            for _ in 0..(max_len_value + 1)*width {
                 result += " ";
             }
             result += "┘";
