@@ -6,6 +6,8 @@
 
 点击 [此处](https://3442853561.gitbooks.io/rustcasestudymanual/content/) 链接或将地址复制到浏览其中: [https://3442853561.gitbooks.io/rustcasestudymanual/content/](https://3442853561.gitbooks.io/rustcasestudymanual/content/)
 
+GitHub仓库地址: (https://github.com/3442853561/RustCaseStudyManual)[https://github.com/3442853561/RustCaseStudyManual]
+
 ## 本书作者
 
 + [@3442853561](https://github.com/3442853561)  
